@@ -1,1 +1,865 @@
 # water-backend
+
+
+                                        [Architecture]
+
+[This section should present]:
+	- the main architectural difficulties,
+	- the use of 3-rd services,
+	- the general view of the cloud architecture of the project.
+[Display of resource usage]:
+	- Database, Cloud Instances and other Cloud provider services
+_______________________________________________________________
+Diagram owner  | @Ruslan Volovik			       |
+_______________________________________________________________|
+Team 	       | @Ruslan Volovik			       |
+	       | @Roman Volovik 			       |
+_______________________________________________________________|
+Informed       | @Roman Volovik 			       |
+	       | @Ruslan Volovik			       |
+_______________________________________________________________|
+Status	       | DRAFT / IN REVIEW / APPROVED / IN PRODUCTION  |
+_______________________________________________________________|
+Last date updated					       |
+_______________________________________________________________|
+
+[On this page]:
+	- Goals
+	- Architecture
+	- Risks
+	- Drivers:
+	- Design constraints
+	- QA Scenarios
+	- Context view of the system
+	- Container view of the system
+  	- Cloud Architecture
+  	- Deployment strategy
+  	- SLA
+  	- Action Items
+  	- References and documentation
+____________________________________________________________________________________________________________________________________________________________________________________
+Name			|	Description																	    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Operational Excellence	| The ability to run and monitor systems to deliver business value and to continually improve supporting processes and procedures.			    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Security		| The ability to protect information, systems, and assets while delivering business value through risk assessments and mitigation strategies.		    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Reliability		| The ability of a system to recover from infrastructure or service disruptions, dynamically acquire computing resources to meet demand,		    |
+			| and mitigate disruptions such as misconfigurations or transient network issues.									    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Performance Efficiency  | The ability to use computing resources efficiently to meet system requirements, and to maintain that efficiency as demand changes and technologies evolve |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Cost Optimization	| The ability to run systems to deliver business value at the lowest price point.									    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+
+[Goals]:
+	- Minimization of server response time
+	- Minimization of development solutions through free solutions of cloud providers
+	- Minimization of modifications to the main architectural solutions of the customer: API, Database, etc.
+	- Building a scalable architecture
+	- Building a fault-tolerant system with 0% order data loss
+	- Hassle-free architecture deployment for any other cloud provider
+
+[Architecture]:
+	Backend:
+		- Platform: node.js
+		- Framework: nest.js
+		- ORM: Typeorm
+	Mobile:
+		- Platform: IOS/ Android
+	Frontend:
+		- Framework: React
+		- State management: Redux
+	Hosting:
+		- Cloud provider: Azure
+
+[Risks]:
+	- Service Layer Agreement:
+	- 3-rd party systems:
+		- Twilio SMS - broadcast SMS for OTP
+		- Firebase Cloud Messaging - push notification
+		- GitHub Action - testing and building projects in Docker Containers, deployment in a cloud provider
+[Drivers]:
+	- Business case:
+		Delivery of the water across the United Emirates.
+		The mobile application allows ordering the water in bottles and the backend application is integrated with the SAP CRM system sync mobile users data with business data
+
+[Major features]:
+	- Login / Register functionality
+	- Products functionality
+	- Orders functionality
+	- Notifications
+	- Chat
+	- Surveys
+	- Voucher reclaims
+	- SAP integrations
+	- Payments
+
+[Design constraints]:
+	- Supported platforms: Web-browsers, Android, iOS
+	- Supported clouds hosts: Azure (because the custom solution for the SAP system is hosted in Azure)
+
+[QA Scenarios]:
+	- (Availability):
+		- Source: Internal
+		- Stimulus: Crash of running compute instance
+		- Environment: Normal operation
+		- Artifact: Running component of the system
+		- Response: Instance is restarted
+		- Response measure: Time to repair 2-3 minutes
+
+		- Source: Internal
+		- Stimulus: Crash of running compute instance
+		- Environment: Normal operation
+		- Artifact: Running component of the system
+		- Response: Failure is detected by the monitor
+		- Response measure: Time to detect 1 minute
+
+	- (Modifiability):
+		- Source: Internal
+		- Stimulus: Change in the configuration of third-parties
+		- Environment: Normal operation
+		- Artifact: Some specific microservice
+		- Response: Change is made only in environment variables without effect on the source code
+		- Response measure: No artifacts are affected except configuration files
+
+	- (Performance):
+		- Source: External
+		- Stimulus: Huge traffic on the computational instance
+		- Environment: Peak load
+		- Response: Computational instance of which peak load is directed is autoscaled to evenly distribute traffic between multiple instances
+		- Artifact: Computational instance of the system
+		- Response measure: Latency after autoscaling = Latency / n where n is the number of new instances created
+
+		- Source: Mobile app client
+		- Stimulus: Request to read the data
+		- Environment: Normal operation
+		- Artifact: Mobile backend instance
+		- Response:  Retrieved data is stored in the cache before returning to the client.
+		- Response measure: If the same request is repeated then data is retrieved from the cache and it will take much less time
+
+	- (Security):
+		- Source: Client from a mobile application or any other client
+		- Stimulus: Unauthorized access to the mobile backend to use services that require authorization
+		- Environment: Normal operation
+		- Response: Client receives the 403 HTTP Error (Unauthorized) and cannot perform any operation on the particular service
+		- Artifact: Mobile backend system
+		- Response measure: All tries to access services with or without authorization are logged and tracked
+
+		- Source: Client from a mobile application or any other client
+		- Stimulus: Creates new account in the system
+		- Environment: Normal operation
+		- Response: Passwords are encrypted and stored only in an encrypted way in the database (password etc.)
+		- Response measure: No passwords are stored without encryption
+
+		- Source: Mobile client, Web client
+		- Stimulus: Performs request to the backend
+		- Environment: Normal operation
+		- Response: Requests are encrypted using SSL
+		- Response measure: No data between frontend (web, mobile) and backend are exchanged without encryption.
+
+	- (Testability):
+		- Source:  Integration tests
+		- Stimulus: Set of test suites
+		- Environment: Before deployment
+		- Artifact: System
+		- Response: The system is tested with as many dependencies running as possible (at least the database) which allows us to check the whole business
+				flow and ensure that everything is working with different presets and conditions.
+			- (Main points for checking):
+				- Success flows (ensures that valid data is saved in the database)
+				- Failure flows (ensures that valid list of errors returned and all required business and schema validation was executed successfully)
+		- Response measure: It provides high coverage with smaller efforts and time consumption compared to the unit tests
+
+		- Source:  Integration tests
+		- Stimulus: All test suites
+		- Environment: Before deployment and before they push to the remote repository
+		- Artifact: System
+		- Response: All tests are executed and deployment of branch or pushing to a remote repository is failed if the tests are not successfully passed
+		- Response measure: It reduces the number of possible runtime errors for end users because bad code cannot be pushed to production.
+
+	- (Usability):
+		- Source: Client from a mobile application or any other client
+		- Stimulus: Performs operation and makes an error
+		- Environment: Normal operation
+		- Response:
+			- Client receives and error message that clearly explains:
+				- with which data or operation issue has happened
+				- how to fix this kind of error
+		- Response measure: Users spend less time understanding the system and its functionality
+
+				[PHOTOS-HERE]
+
+[Architecture flow]:
+	- (Client Apps):
+		- Admin Panel - browser application
+		- Mobile Client - native mobile applications
+		- SAP - any customer applications outside of our development
+
+	- (3-rd Service):
+		- Twilio SMS - broadcast sms for OTP
+		- Twilio WhatsApp Integration - chat service  TBD
+		- Firebase Cloud Messaging - push notification
+		- GitHub Action - testing and building projects in Docker Containers, deployment in a cloud provider
+
+	- (Cloud Architecture):
+		- Azure DNS - DNS service, it is needed for: caching, request routing, setting request restrictions
+		- Admin Panel - Front-End application for administrator's functionality.
+			Includes:
+				- Cloud Computing Instance  TBD
+		- Client API - Back-End application that implements application-specific business logic.
+			Includes:
+				- Cloud Computing Instance
+				- Database Instance - for implementation of missing tables in the main database
+				- Redis Instance - for implementation authentication and storage of temporary data
+
+		- SAP API -
+			Includes:
+				- Cloud Computing Instance
+				- Database Instance
+				- And etc.
+
+		- Azure Service Bus -  messages broker for the exchanging of information between app microservices and SAP system.
+
+		- Chat Microservice - A separate service with its own database to implement chats TBD .
+			Includes:
+				- Cloud Computing Instance
+				- Database Instance
+
+		- Notification Microservice - A separate service with its own database to implement notification.
+			Includes:
+				- Cloud Computing Instance
+				- Database Instance
+	- (Azure Container registry) - native solution of Azure for application deployment management.
+		Deployment Manager
+		Container Registry
+
+[Deployment strategy]:
+	- Building containers:
+		- Typescript microservices should be building using multilayer building approachment.
+		  This is necessary to avoid problems with caching dependencies, lightness of the container and hiding the source code. The following is a three-tier build template:
+
+### Base
+FROM node:12-alpine as base
+ENV NODE_ENV=production
+
+RUN apk update --no-cache
+RUN mkdir /app && chown -R node:node /app
+
+USER node
+WORKDIR /app
+
+# Copy base dependencies describing
+COPY --chown=node:node ./src ./src
+COPY --chown=node:node ./nest-cli.json ./
+COPY --chown=node:node ./package*.json ./
+COPY --chown=node:node ./tsconfig*.json ./
+COPY --chown=node:node ./.env.${NODE_ENV} ./
+
+RUN npm install --only=production
+
+
+### Builder
+FROM base as builder
+
+RUN npm install --only=development
+RUN npm run build
+
+
+### Runtime
+FROM node:12-alpine as runtime
+ENV NODE_ENV=production
+
+# Copy runtime dependencies
+COPY --chown=node:node --from=base /app/node_modules ./node_modules
+COPY --chown=node:node --from=base /app/.env.${NODE_ENV} ./
+COPY --chown=node:node --from=builder /app/dist ./dist
+
+CMD ["node", "dist/main"]
+
+[Features]:
+	- Three-layer construction makes the container lighter and does not include development dependencies in the final image
+	- Creating your own user and group isolates the application from executing root commands and escalating privileges
+	- Using node:12-alpine gives the stability of Node.js version 12 and the lightness of the Alpine image
+
+[Deployment region]:
+	- United Arab Emirates (UAE)
+
+[SLA]:
+	- Requests Per Second (RPS):
+	- Latency:
+
+[References and documentation]:
+	- Twilio SMS
+	- Twilio WhatsApp Integration
+	- Firebase Cloud Messaging
+	- Docker Container
+	- GitHub Action
+	- OTP
+	- Nginx
+	- Azure Service Bus
+
+                                              [Environments-Deployment schedule]
+
+[Main challenge]:
+	- In Adjaa Water project we have integration using messaging between APP system and SAP system
+	  which creates additional challenges related to deployment & development of both applications with ensuring data and schema consistency between them.
+
+[Solutions]:
+	- define a clear flow of deployment
+	- use staging environment for deploying new features and ensuring that both applications work correctly
+
+[Development]:
+	- Main environment for the development of the applications. Both SAP and APP can use their own local environments without any restrictions.
+	- Related branch for APP repository: develop
+
+[Staging]:
+	- Shared environment for APP and SAP which completely duplicates the production environment related to settings.
+	  It is required to ensure that integrations between APP and SAP applications are working correctly for newly implemented functionality.
+
+	- New features should stay in the staging environment for 1 - 2 weeks and Dead-Letter-Queues should be monitored for this time to check how many broken messages have happened.
+
+	- If some issues are found hotfixes should be implemented:
+		- Discussion between SAP and the APP team to decide which team should fix this issue
+		- The selected team provides hot-fix (it should be a task with VERY HIGH priority)
+		- The hotfix is deployed to the staging environment where a check is performed that previously failing messages don’t fail anymore
+	- Related branch for APP repository: staging
+
+[Production]:
+	- The production environment is used by actual users and holds real data. New features should be deployed to this environment only after living for 1 - 2 weeks at the staging environment.
+	- Related branch for APP repository: main
+
+                                          [ERD]
+
+[This section should present]:
+	- specifics of databases of different instances,
+	- description and problems.
+	- Display of tables, relations and etc.
+_______________________________________________________________
+Diagram owner  | @Ruslan Volovik			       |
+_______________________________________________________________|
+Team 	       | @Ruslan Volovik			       |
+	       | @Roman Volovik 			       |
+_______________________________________________________________|
+Informed       | @Roman Volovik 			       |
+	       | @Ruslan Volovik			       |
+_______________________________________________________________|
+Status	       | DRAFT / IN REVIEW / APPROVED / IN PRODUCTION  |
+_______________________________________________________________|
+Last date updated					       |
+_______________________________________________________________|
+
+[On this page]:
+	- Client API Database
+
+[DBML]:
+	enum user_role {
+  		admin
+  		user
+	}
+
+	Table users {
+  		id uuid [pk, not null]
+  		coverId uuid [null]
+
+  		role user_role [not null, default: 'user']
+  		name varchar [not null]
+  		phone varchar [not null]
+  		email varchar [null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+
+  		Indexes {
+    			(phone, email) [type: btree, unique]
+  		}
+	}
+
+	Ref: users.coverId - covers.id [delete: cascade]
+
+	enum addresses_category {
+  		apartment
+  		office
+  		home
+	}
+
+	Table addresses {
+  		id uuid [pk, not null]
+  		userId uuid [not null]
+
+		category addresses_category [not null]
+		name varchar [not null]
+		governorate varchar [not null]
+		area varchar [not null]
+		block varchar [null]
+		street varchar [not null]
+		avenue varchar [not null]
+		house varchar [not null]
+		floor int2 [null]
+		direction varchar [null]
+		coordinates point [not null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+	}
+
+	Ref: addresses.userId > users.id [delete: cascade, update: cascade]
+
+
+	Table notifications {
+  		id uuid [pk, not null]
+  		userId uuid [not null]
+
+  		title varchar [not null]
+  		description varchar [null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+
+  		Indexes {
+    			userId [type: btree]
+  		}
+	}
+
+	Ref: notifications.userId > users.id [delete: cascade, update: cascade]
+
+
+	Table products {
+  		id uuid [pk, not null]
+  		ownerId uuid [not null]
+  		coverId uuid [null]
+
+  		price int4 [not null]
+  		title varchar [not null]
+  		description varchar [null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		deleteAt timestamptz [null]
+
+  		Indexes {
+    			(price, title) [type: btree, unique]
+  		}
+	}
+
+	Ref: products.ownerId > users.id
+	Ref: products.coverId - covers.id [delete: cascade, update: cascade]
+
+
+	Table covers {
+  		id uuid [pk, not null]
+
+  		src varchar [not null]
+  		alt varchar [null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+	}
+
+
+	enum orders_status {
+  		process
+  		delivery
+  		delivered
+  		cancelled
+	}
+
+	Table orders {
+  		id uuid [pk, not null]
+ 	 	userId uuid [not null]
+  		deliveryId uuid [null]
+
+  		status orders_status [not null, default: 'process']
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+
+  		Indexes {
+    			(userId, status) [type: btree]
+  		}
+	}
+
+	Ref: orders.userId > users.id [delete: cascade, update: cascade]
+	Ref: orders.deliveryId - order_deliveries.id [delete: cascade, update: cascade]
+
+	Table order_products {
+  		id uuid [pk, not null]
+  		orderId uuid [not null]
+  		productId uuid [not null]
+
+  		quantity int2 [not null, default: 1]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+
+  		Indexes {
+    			(orderId, productId) [type: btree]
+  		}
+	}
+
+	Ref: order_products.orderId > orders.id [delete: cascade, update: cascade]
+	Ref: order_products.productId > products.id [delete: cascade, update: cascade]
+
+	Table order_deliveries {
+  		id uuid [pk, not null]
+  		instruction varchar [null]
+  		time tstzrange [not null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+	}
+
+[SQL]:
+	CREATE TYPE "user_role" AS ENUM (
+  		'admin',
+  		'user'
+	);
+
+	CREATE TYPE "addresses_category" AS ENUM (
+  		'apartment',
+  		'office',
+  		'home'
+	);
+
+	CREATE TYPE "orders_status" AS ENUM (
+  		'process',
+  		'delivery',
+  		'delivered',
+  		'cancelled'
+	);
+
+	CREATE TABLE "users" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"coverId" uuid,
+  		"role" user_role NOT NULL DEFAULT 'user',
+  		"name" varchar NOT NULL,
+  		"phone" varchar NOT NULL,
+  		"email" varchar,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "addresses" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"userId" uuid NOT NULL,
+  		"category" addresses_category NOT NULL,
+  		"name" varchar NOT NULL,
+  		"governorate" varchar NOT NULL,
+  		"area" varchar NOT NULL,
+  		"block" varchar,
+  		"street" varchar NOT NULL,
+  		"avenue" varchar NOT NULL,
+  		"house" varchar NOT NULL,
+  		"floor" int2,
+  		"direction" varchar,
+  		"coordinates" point NOT NULL,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "notifications" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"userId" uuid NOT NULL,
+  		"title" varchar NOT NULL,
+  		"description" varchar,
+ 	 	"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "products" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"ownerId" uuid NOT NULL,
+  		"coverId" uuid,
+  		"price" int4 NOT NULL,
+  		"title" varchar NOT NULL,
+  		"description" varchar,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"deleteAt" timestamptz
+	);
+
+	CREATE TABLE "covers" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"src" varchar NOT NULL,
+  		"alt" varchar,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "orders" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"userId" uuid NOT NULL,
+  		"deliveryId" uuid,
+  		"status" orders_status NOT NULL DEFAULT 'process',
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "order_products" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"orderId" uuid NOT NULL,
+  		"productId" uuid NOT NULL,
+  		"quantity" int2 NOT NULL DEFAULT 1,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "order_deliveries" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"instruction" varchar,
+  		"time" tstzrange NOT NULL,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	ALTER TABLE "covers" ADD FOREIGN KEY ("id") REFERENCES "users" ("coverId") ON DELETE CASCADE;
+
+	ALTER TABLE "addresses" ADD FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "notifications" ADD FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "products" ADD FOREIGN KEY ("ownerId") REFERENCES "users" ("id");
+
+	ALTER TABLE "covers" ADD FOREIGN KEY ("id") REFERENCES "products" ("coverId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "orders" ADD FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "order_deliveries" ADD FOREIGN KEY ("id") REFERENCES "orders" ("deliveryId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "order_products" ADD FOREIGN KEY ("orderId") REFERENCES "orders" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "order_products" ADD FOREIGN KEY ("productId") REFERENCES "products" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	CREATE UNIQUE INDEX ON "users" USING BTREE ("phone", "email");
+
+	CREATE INDEX ON "notifications" USING BTREE ("userId");
+
+	CREATE UNIQUE INDEX ON "products" USING BTREE ("price", "title");
+
+	CREATE INDEX ON "orders" USING BTREE ("userId", "status");
+
+	CREATE INDEX ON "order_products" USING BTREE ("orderId", "productId");
+
+                                                [Integration between SAP and APP]
+
+[Business requirements]:
+	- Integration between SAP and APP systems to sync changes made in different applications
+	- Changes should be applied in sequential order to ensure database constraints
+	- Changes should not be lost until they are processed
+	- Provide cloud independent solution that can be deployed to the different clouds with minimal costs and efforts
+
+[Architecture of integration]:
+	- Pattern:
+	- API calls
+
+	- Both SAP and APP provide their own APIs for consuming changes related to the changes in the shared features
+
+	- Each change is stored in the specific table in the database of SAP and APP. If change is successfully processed, it should be marked “Completed” in the database of the producer of this change.
+
+	- Each app has a list of API endpoints:
+
+		- GET /api/changes - Returns a list of changes that have not been processed by the consumer applications.
+		  This is used for consuming unprocessed changes by the consumer if the consumer was down for some time and needs to fetch all changes made by the producer to sync databases.
+
+		- POST /api/confirm-changes - Allows to notify changes that were successfully applied in db of another app
+
+		- POST, PUT, DELETE /api/{entity-name} - endpoints for mutations of entity to sync databases of two applications.
+		  It is used by producers to make changes in another app. Firstly the producer makes changes in its own database and then performs an API call
+		  to another app to sync its database with the producer’s database.
+
+[PHOTOS-HERE]:
+
+[IDs handling]:
+	- Since both APP and SAP will have their own databases and may have different formats of ids and different approaches to its generation
+	  we will send via API and store in each database two ids per business entity:
+
+	- The ID of the entity in the SAP application database
+	- The ID of the entity in the APP application database
+
+[Validation]:
+	- Each application has it is own database and apps even for the same business entity can have slightly different sets of fields.
+
+	- Therefore it is important to perform the two types of validation of incoming changed entity from another app:
+		- Schema validation (number of fields, field types, etc )
+		- Business validation (checks that provided entity doesn’t violate any business rules and database constraints)
+
+	- If validation is failed several things should happen:
+		- the 4xx error should be returned to the client to show that the operation has failed
+		- list of errors is logged to be able to use logging data for further investigation the reason of the happened issue
+
+	- Types of errors:
+		- Schema errors (invalid fields, invalid type of field)
+		- Business validation errors (received data violates business rules at some of the clients)
+
+[Flows]:
+	- (Propagation of changes (SAP => APP)):
+		- SAP makes changes in its own database
+		- SAP makes an API call to APP to mutate its data
+		- APP can send real-time updates to the Mobile or Web clients
+
+	- (Flow when APP is started successfully after some time of downtime):
+		- APP makes a GET request to the SAP to get all unprocessed changes
+		- APP applies changes to its database in sequential order, sends real-time notifications to clients if needed.
+		- APP sends a POST request to the SAP with ids of the changes that have been successfully applied by the APP
+
+	- (Error flow):
+		- APP makes a GET request to the SAP to get all unprocessed changes
+		- APP fails to process the fetched changes, reasons:
+			- schema validation errors
+			- business validation errors
+			- database errors
+
+	- (If the reason for issues is a DB error then APP retries for a couple of times)
+
+	- (APP logs happened errors and DOESN’T send an acknowledgment for the changes)
+
+	- (Storing changes):
+		- Changes should be stored in the relational table, possible columns:
+			- id (the unique identifier of change, UUID)
+			- type (the string that describes which kind of business entity was modified)
+			- data (JSON string with modified data of business entity)
+			- createdAt (timestamp of change)
+			- isCompleted (a boolean value that indicates is change has been processed by another application or not)
+
+[Security]:
+	- Network-level: all requests between SAP and APP should be encrypted using S HTTPS (SSL)
+
+	- App-level:  Each app needs to provide a Bearer JWT token in the
+	- Authorization header. JWT token is acquired using login endpoint. SAP or APP will provide login and password as a regular mobile or web client but with unlimited permissions.
+
+	- The absence of the JWT token is going to cause 403 Unauthorized error
+
+		Login Request Body {
+			“login”: 65767665,
+			“password”: “somepassword”
+		}
+
+		Login Response Body {
+			“accessToken”: “eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9”
+		}
+
+	- Required HTTP header for any business request that mutates or reads data
+	- Authorization: “Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9”
+
+[Logging]:
+	- Each application should log the requests that it makes to the API of the separate app to ensure that if some issue or strange behavior happens
+	  it is properly logged to be investigated in the future.
+
+	- Logs are collected in the file and further can be pushed to some logging aggregator.
+
+	- Example of logging message:
+
+		2019-08-27 01:34:36 207 POST https://xxx.water.com/api/users  200 Headers { “Authorization”: “Bearer {token}” } Request Body { “firstName”: “Alex”, “lastName”: “Morgan”, “email”: “alan@gmail.com”, “password”: “some-pass”  } Response Body { “id”: 20, “sapId”: 34, “firstName”: “Alex”, “lastName”: “Morgan”, “email”: “alan@gmail.com”, “password”: “some-pass”  }
+
+	- Elements:
+		- 2019-08-27 01:34:36 207 - timestamp of request
+		- POST https://app.xxx.water.com/api/users  200 - request URL and status data
+		- Headers { “Authorization”: “Bearer {token}” } - http headers that were provided with the request in the JSON format
+		- Request Body { “firstName”: “Alex”, “lastName”: “Morgan”, “email”: “alan@gmail.com”, “password”: “some-pass”  } - request body in the JSON format (only for mutations operations)
+		- Response Body { “id”: 20, “sapId”: 34, “firstName”: “Alex”, “lastName”: “Morgan”, “email”: “alan@gmail.com”, “password”: “some-pass”  } - response body in the JSON format (only for mutations operations)
+
+[Staging environment]:
+	- Because of the distributed work on the application, it is extremely important to have a staging environment that has the same configs as the production and allows us to sync APP and SAP together and see how many errors are generated when a new version of each app is deployed to the staging environment.
+
+[Flow]:
+	- A new version of APP or SAP is deployed to the staging
+	- It stays on the staging fo some transition period (1 week etc) and we regularly monitor is there any issues related to interacting between two apps
+
+                            [Shared entities between SAP and APP]
+
+[Summary]:
+	- Entities where changes are propagated from APP to SAP:
+		- orders
+		- customers
+		- surveys
+
+[Entities where changes are propagated from SAP to APP]:
+	- coupons
+	- products
+	- promotions
+	- customers
+	- delivery details
+	- orders
+
+                                  [Payment integration]
+
+[Requirements]:
+	- Customer should be able to pay via credit / debit card using mobile application
+	- Payment gateway should support currency Kuwaiti Dinar (KWD)
+	- System should make order completed only when payment is verified by the payment provider
+	- System should not allow to make order paid by plain UI request (security violation) because client-side code can be hacked
+
+[Solution]:
+	- (Used payment provider) - Tap (https://www.tap.company/kw/en/developers), it supports KWD currency and works in the Kuwait
+	- (To simplify development of the payment integration we are going to use SDK for both iOS and Android platforms):
+		- Android SDK - https://github.com/Tap-Payments/goSellSDK-android 			- Connect to preview
+		- iOS SDK - https://github.com/Tap-Payments/goSellSDK-iOS 				- Connect to preview
+
+	- (Configuration properties):
+		- authToken — to authorize your requests.// Secret key (format: "sk_XXXXXXXXXXXXXXXXXXXXXXXX")
+		- app_id — replace it using your application ID "Application main package"
+
+	- (SDKs functions in two modes (Modes should be defined on the configuration of the SDK in the starting of the application)):
+		- sandbox - will be used for all of the testing (both manual and automatic)
+		- production - will be used for the production because it involves actual transfering real data
+
+	- (We use Transaction mode - Purchase, because we need only handle purchase of the products)
+
+	- (Tap system handle both CREDIT and DEBIT cards)
+
+	- (SDK is able to display its UI in languages):
+		- Arabic (ar)
+		- English (en)
+
+                                                  [Publishing order to SAP]
+
+[Summary]:
+	- This document describes the list of fields that should be sent to the SAP system on the url “/AddNewSalesOrder” (http://xxx:8089/RegistrationService/api-docs/index.html?url=/RegistrationService/api-docs/swagger.json#!/Services/WcfSwaggerStart_Store_AddNewSalesOrder) - url to the Swagger docs
+
+[Fields]:
+	- SubTotal - **ItemDetails.LineTotal *** number of order items
+
+	- MosqueOrder - If a new Mosque is generated from the app, the details should be send to SAP by using AddNewSalesOrder. In this case, that boolean Mosque order differentiates the regular order with Mosque orders.
+
+	- MosqueID - SAP id of the mosque (waiting for the endpoint in SAP)
+
+	- DeliveryAddressID - SAP id of the delivery address
+
+	- DeliveryAddressType - type of the delivery address
+
+	- OrderDiscount - amount in currency of discount that is applied to the whole order (applied via promocode application or promotions)
+
+	- OrderDiscountPercentage - percentage of the discount in relation to the whole order without discount (discount percentage = discount / total amount before discount * 100%), format = "25" = 25%
+
+	- DeliveryAddressType - type of the delivery address
+
+	- NetAmount - final order amount
+
+	- DeliveryCost - 0 for now
+
+	- PaymentType - use get customer payment method endpoint and use type from there
+
+	- PaidAmount - initially paid amount is equal net amount (can be applied to coupons), can be reduced using coupons
+
+	- PaymentCardType - MasterCard, Visa, can be get from payment endpoint
+
+	- PaymentConfirmation - message from the payment gateway that reflects payment id
+
+	- ScheduledDeliveryDate - APP field deliveryDate
+
+	- ScheduledDeliverySlot - APP deliveryTimeSlot.value
+
+		- ItemDetails.SKUCode - product code (SAP id of the product)
+
+		- - ItemDetails.Qty - quantity of product
+
+		- ItemDetails.PromotionType - use the endpoint to get all of the promotion types
+
+		- ItemDetails.PromotionID - SAP id of promotion
+
+		- ItemDetails.DiscountPerc - amount in currency of discount that is applied to the specific line item
+
+		- ItemDetails.DiscountAmount - percentage of the discount in relation to the order item without discount (discount percentage = discount / total amount before discount * 100%), format = "25" = 25%
+
+		- ItemDetails.SalesPrice - price of the one item of product
+
+		- ItemDetails.LineTotal - quantity, multiplied by Qty * SalesPrice
