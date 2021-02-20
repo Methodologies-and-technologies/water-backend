@@ -1,0 +1,27 @@
+[Main challenge]:
+	- In Adjaa Water project we have integration using messaging between APP system and SAP system 
+	  which creates additional challenges related to deployment & development of both applications with ensuring data and schema consistency between them.
+
+[Solutions]:
+	- define a clear flow of deployment
+	- use staging environment for deploying new features and ensuring that both applications work correctly
+
+[Development]:
+	- Main environment for the development of the applications. Both SAP and APP can use their own local environments without any restrictions.
+	- Related branch for APP repository: develop
+
+[Staging]:
+	- Shared environment for APP and SAP which completely duplicates the production environment related to settings.
+	  It is required to ensure that integrations between APP and SAP applications are working correctly for newly implemented functionality.
+
+	- New features should stay in the staging environment for 1 - 2 weeks and Dead-Letter-Queues should be monitored for this time to check how many broken messages have happened.
+
+	- If some issues are found hotfixes should be implemented:
+		- Discussion between SAP and the APP team to decide which team should fix this issue
+		- The selected team provides hot-fix (it should be a task with VERY HIGH priority)
+		- The hotfix is deployed to the staging environment where a check is performed that previously failing messages don’t fail anymore
+	- Related branch for APP repository: staging
+
+[Production]:
+	- The production environment is used by actual users and holds real data. New features should be deployed to this environment only after living for 1 - 2 weeks at the staging environment.
+	- Related branch for APP repository: main

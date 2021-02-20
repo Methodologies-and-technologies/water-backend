@@ -1,0 +1,13 @@
+[Summary]:
+	- Entities where changes are propagated from APP to SAP:
+		- orders
+		- customers
+		- surveys
+
+[Entities where changes are propagated from SAP to APP]:
+	- coupons
+	- products
+	- promotions
+	- customers
+	- delivery details
+	- orders

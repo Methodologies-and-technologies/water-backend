@@ -1,0 +1,122 @@
+[Business requirements]:
+	- Integration between SAP and APP systems to sync changes made in different applications
+	- Changes should be applied in sequential order to ensure database constraints
+	- Changes should not be lost until they are processed 
+	- Provide cloud independent solution that can be deployed to the different clouds with minimal costs and efforts
+
+[Architecture of integration]:
+	- Pattern: 
+	- API calls
+
+	- Both SAP and APP provide their own APIs for consuming changes related to the changes in the shared features
+
+	- Each change is stored in the specific table in the database of SAP and APP. If change is successfully processed, it should be marked “Completed” in the database of the producer of this change.
+
+	- Each app has a list of API endpoints:
+
+		- GET /api/changes - Returns a list of changes that have not been processed by the consumer applications.
+		  This is used for consuming unprocessed changes by the consumer if the consumer was down for some time and needs to fetch all changes made by the producer to sync databases.
+
+		- POST /api/confirm-changes - Allows to notify changes that were successfully applied in db of another app
+
+		- POST, PUT, DELETE /api/{entity-name} - endpoints for mutations of entity to sync databases of two applications.
+		  It is used by producers to make changes in another app. Firstly the producer makes changes in its own database and then performs an API call
+		  to another app to sync its database with the producer’s database.
+
+[PHOTOS-HERE]:
+
+[IDs handling]:
+	- Since both APP and SAP will have their own databases and may have different formats of ids and different approaches to its generation
+	  we will send via API and store in each database two ids per business entity:
+
+	- The ID of the entity in the SAP application database
+	- The ID of the entity in the APP application database 
+
+[Validation]:
+	- Each application has it is own database and apps even for the same business entity can have slightly different sets of fields.
+
+	- Therefore it is important to perform the two types of validation of incoming changed entity from another app:
+		- Schema validation (number of fields, field types, etc )
+		- Business validation (checks that provided entity doesn’t violate any business rules and database constraints)
+
+	- If validation is failed several things should happen:
+		- the 4xx error should be returned to the client to show that the operation has failed
+		- list of errors is logged to be able to use logging data for further investigation the reason of the happened issue
+
+	- Types of errors:
+		- Schema errors (invalid fields, invalid type of field)
+		- Business validation errors (received data violates business rules at some of the clients)
+
+[Flows]:
+	- (Propagation of changes (SAP => APP)):
+		- SAP makes changes in its own database
+		- SAP makes an API call to APP to mutate its data
+		- APP can send real-time updates to the Mobile or Web clients 
+
+	- (Flow when APP is started successfully after some time of downtime):
+		- APP makes a GET request to the SAP to get all unprocessed changes
+		- APP applies changes to its database in sequential order, sends real-time notifications to clients if needed.
+		- APP sends a POST request to the SAP with ids of the changes that have been successfully applied by the APP
+
+	- (Error flow):
+		- APP makes a GET request to the SAP to get all unprocessed changes
+		- APP fails to process the fetched changes, reasons:
+			- schema validation errors
+			- business validation errors
+			- database errors
+
+	- (If the reason for issues is a DB error then APP retries for a couple of times)
+
+	- (APP logs happened errors and DOESN’T send an acknowledgment for the changes)
+
+	- (Storing changes):
+		- Changes should be stored in the relational table, possible columns:
+			- id (the unique identifier of change, UUID)
+			- type (the string that describes which kind of business entity was modified)
+			- data (JSON string with modified data of business entity)
+			- createdAt (timestamp of change)
+			- isCompleted (a boolean value that indicates is change has been processed by another application or not)
+
+[Security]:
+	- Network-level: all requests between SAP and APP should be encrypted using S HTTPS (SSL)
+
+	- App-level:  Each app needs to provide a Bearer JWT token in the
+	- Authorization header. JWT token is acquired using login endpoint. SAP or APP will provide login and password as a regular mobile or web client but with unlimited permissions.
+	
+	- The absence of the JWT token is going to cause 403 Unauthorized error
+
+		Login Request Body {
+			“login”: 65767665,
+			“password”: “somepassword”
+		}
+
+		Login Response Body {
+			“accessToken”: “eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9”
+		}
+
+	- Required HTTP header for any business request that mutates or reads data
+	- Authorization: “Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9”
+
+[Logging]:
+	- Each application should log the requests that it makes to the API of the separate app to ensure that if some issue or strange behavior happens
+	  it is properly logged to be investigated in the future.
+
+	- Logs are collected in the file and further can be pushed to some logging aggregator.
+
+	- Example of logging message:
+
+		2019-08-27 01:34:36 207 POST https://xxx.water.com/api/users  200 Headers { “Authorization”: “Bearer {token}” } Request Body { “firstName”: “Alex”, “lastName”: “Morgan”, “email”: “alan@gmail.com”, “password”: “some-pass”  } Response Body { “id”: 20, “sapId”: 34, “firstName”: “Alex”, “lastName”: “Morgan”, “email”: “alan@gmail.com”, “password”: “some-pass”  }
+	
+	- Elements:
+		- 2019-08-27 01:34:36 207 - timestamp of request
+		- POST https://app.xxx.water.com/api/users  200 - request URL and status data
+		- Headers { “Authorization”: “Bearer {token}” } - http headers that were provided with the request in the JSON format
+		- Request Body { “firstName”: “Alex”, “lastName”: “Morgan”, “email”: “alan@gmail.com”, “password”: “some-pass”  } - request body in the JSON format (only for mutations operations)
+		- Response Body { “id”: 20, “sapId”: 34, “firstName”: “Alex”, “lastName”: “Morgan”, “email”: “alan@gmail.com”, “password”: “some-pass”  } - response body in the JSON format (only for mutations operations)
+
+[Staging environment]:
+	- Because of the distributed work on the application, it is extremely important to have a staging environment that has the same configs as the production and allows us to sync APP and SAP together and see how many errors are generated when a new version of each app is deployed to the staging environment.
+
+[Flow]:
+	- A new version of APP or SAP is deployed to the staging
+	- It stays on the staging fo some transition period (1 week etc) and we regularly monitor is there any issues related to interacting between two apps

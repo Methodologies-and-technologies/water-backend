@@ -1,0 +1,308 @@
+[This section should present]:
+	- specifics of databases of different instances,
+	- description and problems.
+	- Display of tables, relations and etc.
+_______________________________________________________________
+Diagram owner  | @Ruslan Volovik			       |
+_______________________________________________________________|
+Team 	       | @Ruslan Volovik			       |
+	       | @Roman Volovik 			       |
+_______________________________________________________________|
+Informed       | @Roman Volovik 			       |
+	       | @Ruslan Volovik			       |
+_______________________________________________________________|
+Status	       | DRAFT / IN REVIEW / APPROVED / IN PRODUCTION  |
+_______________________________________________________________|
+Last date updated					       |
+_______________________________________________________________|
+
+[On this page]:
+	- Client API Database
+
+[DBML]:
+	enum user_role {
+  		admin
+  		user
+	}
+
+	Table users {
+  		id uuid [pk, not null]
+  		coverId uuid [null]
+
+  		role user_role [not null, default: 'user']
+  		name varchar [not null]
+  		phone varchar [not null]
+  		email varchar [null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+
+  		Indexes {
+    			(phone, email) [type: btree, unique]
+  		}
+	}
+
+	Ref: users.coverId - covers.id [delete: cascade]
+
+	enum addresses_category {
+  		apartment
+  		office
+  		home
+	}
+
+	Table addresses {
+  		id uuid [pk, not null]
+  		userId uuid [not null]
+
+		category addresses_category [not null]
+		name varchar [not null]
+		governorate varchar [not null]
+		area varchar [not null]
+		block varchar [null]
+		street varchar [not null]
+		avenue varchar [not null]
+		house varchar [not null]
+		floor int2 [null]
+		direction varchar [null]
+		coordinates point [not null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+	}
+
+	Ref: addresses.userId > users.id [delete: cascade, update: cascade]
+
+
+	Table notifications {
+  		id uuid [pk, not null]
+  		userId uuid [not null]
+
+  		title varchar [not null]
+  		description varchar [null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+
+  		Indexes {
+    			userId [type: btree]
+  		}
+	}
+
+	Ref: notifications.userId > users.id [delete: cascade, update: cascade]
+
+
+	Table products {
+  		id uuid [pk, not null]
+  		ownerId uuid [not null]
+  		coverId uuid [null]
+
+  		price int4 [not null]
+  		title varchar [not null]
+  		description varchar [null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		deleteAt timestamptz [null]
+
+  		Indexes {
+    			(price, title) [type: btree, unique]
+  		}
+	}
+
+	Ref: products.ownerId > users.id
+	Ref: products.coverId - covers.id [delete: cascade, update: cascade]
+
+
+	Table covers {
+  		id uuid [pk, not null]
+
+  		src varchar [not null]
+  		alt varchar [null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+	}
+
+
+	enum orders_status {
+  		process
+  		delivery
+  		delivered
+  		cancelled
+	}
+
+	Table orders {
+  		id uuid [pk, not null]
+ 	 	userId uuid [not null]
+  		deliveryId uuid [null]
+  
+  		status orders_status [not null, default: 'process']
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+
+  		Indexes {
+    			(userId, status) [type: btree]
+  		}
+	}
+
+	Ref: orders.userId > users.id [delete: cascade, update: cascade]
+	Ref: orders.deliveryId - order_deliveries.id [delete: cascade, update: cascade]
+
+	Table order_products {
+  		id uuid [pk, not null]
+  		orderId uuid [not null]
+  		productId uuid [not null]
+
+  		quantity int2 [not null, default: 1]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+
+  		Indexes {
+    			(orderId, productId) [type: btree]
+  		}
+	}
+
+	Ref: order_products.orderId > orders.id [delete: cascade, update: cascade]
+	Ref: order_products.productId > products.id [delete: cascade, update: cascade]
+
+	Table order_deliveries {
+  		id uuid [pk, not null]
+  		instruction varchar [null]
+  		time tstzrange [not null]
+
+  		createAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+  		updateAt timestamptz [not null, default: 'CURRENT_TIMESTAMP']
+	}
+
+[SQL]:
+	CREATE TYPE "user_role" AS ENUM (
+  		'admin',
+  		'user'
+	);
+
+	CREATE TYPE "addresses_category" AS ENUM (
+  		'apartment',
+  		'office',
+  		'home'
+	);
+
+	CREATE TYPE "orders_status" AS ENUM (
+  		'process',
+  		'delivery',
+  		'delivered',
+  		'cancelled'
+	);
+
+	CREATE TABLE "users" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"coverId" uuid,
+  		"role" user_role NOT NULL DEFAULT 'user',
+  		"name" varchar NOT NULL,
+  		"phone" varchar NOT NULL,
+  		"email" varchar,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "addresses" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"userId" uuid NOT NULL,
+  		"category" addresses_category NOT NULL,
+  		"name" varchar NOT NULL,
+  		"governorate" varchar NOT NULL,
+  		"area" varchar NOT NULL,
+  		"block" varchar,
+  		"street" varchar NOT NULL,
+  		"avenue" varchar NOT NULL,
+  		"house" varchar NOT NULL,
+  		"floor" int2,
+  		"direction" varchar,
+  		"coordinates" point NOT NULL,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "notifications" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"userId" uuid NOT NULL,
+  		"title" varchar NOT NULL,
+  		"description" varchar,
+ 	 	"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "products" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"ownerId" uuid NOT NULL,
+  		"coverId" uuid,
+  		"price" int4 NOT NULL,
+  		"title" varchar NOT NULL,
+  		"description" varchar,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"deleteAt" timestamptz
+	);
+
+	CREATE TABLE "covers" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"src" varchar NOT NULL,
+  		"alt" varchar,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "orders" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"userId" uuid NOT NULL,
+  		"deliveryId" uuid,
+  		"status" orders_status NOT NULL DEFAULT 'process',
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "order_products" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"orderId" uuid NOT NULL,
+  		"productId" uuid NOT NULL,
+  		"quantity" int2 NOT NULL DEFAULT 1,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	CREATE TABLE "order_deliveries" (
+  		"id" uuid PRIMARY KEY NOT NULL,
+  		"instruction" varchar,
+  		"time" tstzrange NOT NULL,
+  		"createAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  		"updateAt" timestamptz NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+	);
+
+	ALTER TABLE "covers" ADD FOREIGN KEY ("id") REFERENCES "users" ("coverId") ON DELETE CASCADE;
+
+	ALTER TABLE "addresses" ADD FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "notifications" ADD FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "products" ADD FOREIGN KEY ("ownerId") REFERENCES "users" ("id");
+
+	ALTER TABLE "covers" ADD FOREIGN KEY ("id") REFERENCES "products" ("coverId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "orders" ADD FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "order_deliveries" ADD FOREIGN KEY ("id") REFERENCES "orders" ("deliveryId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "order_products" ADD FOREIGN KEY ("orderId") REFERENCES "orders" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	ALTER TABLE "order_products" ADD FOREIGN KEY ("productId") REFERENCES "products" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+	CREATE UNIQUE INDEX ON "users" USING BTREE ("phone", "email");
+
+	CREATE INDEX ON "notifications" USING BTREE ("userId");
+
+	CREATE UNIQUE INDEX ON "products" USING BTREE ("price", "title");
+
+	CREATE INDEX ON "orders" USING BTREE ("userId", "status");
+
+	CREATE INDEX ON "order_products" USING BTREE ("orderId", "productId");

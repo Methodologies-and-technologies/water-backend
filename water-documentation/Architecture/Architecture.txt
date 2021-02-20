@@ -1,0 +1,294 @@
+[This section should present]:
+	- the main architectural difficulties,
+	- the use of 3-rd services,
+	- the general view of the cloud architecture of the project.
+[Display of resource usage]:
+	- Database, Cloud Instances and other Cloud provider services
+_______________________________________________________________
+Diagram owner  | @Ruslan Volovik			       |
+_______________________________________________________________|
+Team 	       | @Ruslan Volovik			       |
+	       | @Roman Volovik 			       |
+_______________________________________________________________|
+Informed       | @Roman Volovik 			       |
+	       | @Ruslan Volovik			       |
+_______________________________________________________________|
+Status	       | DRAFT / IN REVIEW / APPROVED / IN PRODUCTION  |
+_______________________________________________________________|
+Last date updated					       |
+_______________________________________________________________|
+
+[On this page]:
+	- Goals
+	- Architecture
+	- Risks
+	- Drivers:
+	- Design constraints
+	- QA Scenarios
+	- Context view of the system
+	- Container view of the system
+  	- Cloud Architecture
+  	- Deployment strategy
+  	- SLA
+  	- Action Items
+  	- References and documentation
+____________________________________________________________________________________________________________________________________________________________________________________
+Name			|	Description																	    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Operational Excellence	| The ability to run and monitor systems to deliver business value and to continually improve supporting processes and procedures.			    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Security		| The ability to protect information, systems, and assets while delivering business value through risk assessments and mitigation strategies.		    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Reliability		| The ability of a system to recover from infrastructure or service disruptions, dynamically acquire computing resources to meet demand,		    |
+			| and mitigate disruptions such as misconfigurations or transient network issues.									    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Performance Efficiency  | The ability to use computing resources efficiently to meet system requirements, and to maintain that efficiency as demand changes and technologies evolve |
+____________________________________________________________________________________________________________________________________________________________________________________|
+Cost Optimization	| The ability to run systems to deliver business value at the lowest price point.									    |
+____________________________________________________________________________________________________________________________________________________________________________________|
+
+[Goals]:
+	- Minimization of server response time
+	- Minimization of development solutions through free solutions of cloud providers
+	- Minimization of modifications to the main architectural solutions of the customer: API, Database, etc.
+	- Building a scalable architecture
+	- Building a fault-tolerant system with 0% order data loss
+	- Hassle-free architecture deployment for any other cloud provider
+
+[Architecture]:
+	Backend:
+		- Platform: node.js
+		- Framework: nest.js
+		- ORM: Typeorm
+	Mobile:
+		- Platform: IOS/ Android
+	Frontend:
+		- Framework: React
+		- State management: Redux
+	Hosting:
+		- Cloud provider: Azure
+
+[Risks]:
+	- Service Layer Agreement:
+	- 3-rd party systems:
+		- Twilio SMS - broadcast SMS for OTP
+		- Firebase Cloud Messaging - push notification
+		- GitHub Action - testing and building projects in Docker Containers, deployment in a cloud provider
+[Drivers]:
+	- Business case:
+		Delivery of the water across the United Emirates.
+		The mobile application allows ordering the water in bottles and the backend application is integrated with the SAP CRM system sync mobile users data with business data
+
+[Major features]:
+	- Login / Register functionality
+	- Products functionality
+	- Orders functionality
+	- Notifications
+	- Chat
+	- Surveys
+	- Voucher reclaims
+	- SAP integrations
+	- Payments
+
+[Design constraints]:
+	- Supported platforms: Web-browsers, Android, iOS
+	- Supported clouds hosts: Azure (because the custom solution for the SAP system is hosted in Azure)
+
+[QA Scenarios]:
+	- (Availability):
+		- Source: Internal
+		- Stimulus: Crash of running compute instance
+		- Environment: Normal operation
+		- Artifact: Running component of the system
+		- Response: Instance is restarted
+		- Response measure: Time to repair 2-3 minutes
+
+		- Source: Internal
+		- Stimulus: Crash of running compute instance
+		- Environment: Normal operation
+		- Artifact: Running component of the system
+		- Response: Failure is detected by the monitor
+		- Response measure: Time to detect 1 minute
+
+	- (Modifiability):
+		- Source: Internal
+		- Stimulus: Change in the configuration of third-parties
+		- Environment: Normal operation
+		- Artifact: Some specific microservice
+		- Response: Change is made only in environment variables without effect on the source code
+		- Response measure: No artifacts are affected except configuration files
+
+	- (Performance):
+		- Source: External
+		- Stimulus: Huge traffic on the computational instance
+		- Environment: Peak load
+		- Response: Computational instance of which peak load is directed is autoscaled to evenly distribute traffic between multiple instances
+		- Artifact: Computational instance of the system
+		- Response measure: Latency after autoscaling = Latency / n where n is the number of new instances created
+
+		- Source: Mobile app client
+		- Stimulus: Request to read the data
+		- Environment: Normal operation
+		- Artifact: Mobile backend instance
+		- Response:  Retrieved data is stored in the cache before returning to the client.
+		- Response measure: If the same request is repeated then data is retrieved from the cache and it will take much less time
+
+	- (Security):
+		- Source: Client from a mobile application or any other client
+		- Stimulus: Unauthorized access to the mobile backend to use services that require authorization
+		- Environment: Normal operation
+		- Response: Client receives the 403 HTTP Error (Unauthorized) and cannot perform any operation on the particular service
+		- Artifact: Mobile backend system
+		- Response measure: All tries to access services with or without authorization are logged and tracked
+
+		- Source: Client from a mobile application or any other client
+		- Stimulus: Creates new account in the system
+		- Environment: Normal operation
+		- Response: Passwords are encrypted and stored only in an encrypted way in the database (password etc.)
+		- Response measure: No passwords are stored without encryption
+
+		- Source: Mobile client, Web client
+		- Stimulus: Performs request to the backend
+		- Environment: Normal operation
+		- Response: Requests are encrypted using SSL
+		- Response measure: No data between frontend (web, mobile) and backend are exchanged without encryption.
+
+	- (Testability):
+		- Source:  Integration tests
+		- Stimulus: Set of test suites
+		- Environment: Before deployment
+		- Artifact: System
+		- Response: The system is tested with as many dependencies running as possible (at least the database) which allows us to check the whole business
+				flow and ensure that everything is working with different presets and conditions.
+			- (Main points for checking):
+				- Success flows (ensures that valid data is saved in the database)
+				- Failure flows (ensures that valid list of errors returned and all required business and schema validation was executed successfully)
+		- Response measure: It provides high coverage with smaller efforts and time consumption compared to the unit tests
+
+		- Source:  Integration tests
+		- Stimulus: All test suites
+		- Environment: Before deployment and before they push to the remote repository
+		- Artifact: System
+		- Response: All tests are executed and deployment of branch or pushing to a remote repository is failed if the tests are not successfully passed
+		- Response measure: It reduces the number of possible runtime errors for end users because bad code cannot be pushed to production.
+
+	- (Usability):
+		- Source: Client from a mobile application or any other client
+		- Stimulus: Performs operation and makes an error
+		- Environment: Normal operation
+		- Response:
+			- Client receives and error message that clearly explains:
+				- with which data or operation issue has happened
+				- how to fix this kind of error
+		- Response measure: Users spend less time understanding the system and its functionality
+
+				[PHOTOS-HERE]
+
+[Architecture flow]:
+	- (Client Apps):
+		- Admin Panel - browser application
+		- Mobile Client - native mobile applications
+		- SAP - any customer applications outside of our development
+
+	- (3-rd Service):
+		- Twilio SMS - broadcast sms for OTP
+		- Twilio WhatsApp Integration - chat service  TBD
+		- Firebase Cloud Messaging - push notification
+		- GitHub Action - testing and building projects in Docker Containers, deployment in a cloud provider
+
+	- (Cloud Architecture):
+		- Azure DNS - DNS service, it is needed for: caching, request routing, setting request restrictions
+		- Admin Panel - Front-End application for administrator's functionality.
+			Includes:
+				- Cloud Computing Instance  TBD
+		- Client API - Back-End application that implements application-specific business logic.
+			Includes:
+				- Cloud Computing Instance
+				- Database Instance - for implementation of missing tables in the main database
+				- Redis Instance - for implementation authentication and storage of temporary data
+
+		- SAP API -
+			Includes:
+				- Cloud Computing Instance
+				- Database Instance
+				- And etc.
+
+		- Azure Service Bus -  messages broker for the exchanging of information between app microservices and SAP system.
+
+		- Chat Microservice - A separate service with its own database to implement chats TBD .
+			Includes:
+				- Cloud Computing Instance
+				- Database Instance
+
+		- Notification Microservice - A separate service with its own database to implement notification.
+			Includes:
+				- Cloud Computing Instance
+				- Database Instance
+	- (Azure Container registry) - native solution of Azure for application deployment management.
+		Deployment Manager
+		Container Registry
+
+[Deployment strategy]:
+	- Building containers:
+		- Typescript microservices should be building using multilayer building approachment.
+		  This is necessary to avoid problems with caching dependencies, lightness of the container and hiding the source code. The following is a three-tier build template:
+
+### Base
+FROM node:12-alpine as base
+ENV NODE_ENV=production
+
+RUN apk update --no-cache
+RUN mkdir /app && chown -R node:node /app
+
+USER node
+WORKDIR /app
+
+# Copy base dependencies describing
+COPY --chown=node:node ./src ./src
+COPY --chown=node:node ./nest-cli.json ./
+COPY --chown=node:node ./package*.json ./
+COPY --chown=node:node ./tsconfig*.json ./
+COPY --chown=node:node ./.env.${NODE_ENV} ./
+
+RUN npm install --only=production
+
+
+### Builder
+FROM base as builder
+
+RUN npm install --only=development
+RUN npm run build
+
+
+### Runtime
+FROM node:12-alpine as runtime
+ENV NODE_ENV=production
+
+# Copy runtime dependencies
+COPY --chown=node:node --from=base /app/node_modules ./node_modules
+COPY --chown=node:node --from=base /app/.env.${NODE_ENV} ./
+COPY --chown=node:node --from=builder /app/dist ./dist
+
+CMD ["node", "dist/main"]
+
+[Features]:
+	- Three-layer construction makes the container lighter and does not include development dependencies in the final image
+	- Creating your own user and group isolates the application from executing root commands and escalating privileges
+	- Using node:12-alpine gives the stability of Node.js version 12 and the lightness of the Alpine image
+
+[Deployment region]:
+	- United Arab Emirates (UAE)
+
+[SLA]:
+	- Requests Per Second (RPS):
+	- Latency:
+
+[References and documentation]:
+	- Twilio SMS
+	- Twilio WhatsApp Integration
+	- Firebase Cloud Messaging
+	- Docker Container
+	- GitHub Action
+	- OTP
+	- Nginx
+	- Azure Service Bus

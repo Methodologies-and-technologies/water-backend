@@ -1,0 +1,51 @@
+[Summary]:
+	- This document describes the list of fields that should be sent to the SAP system on the url “/AddNewSalesOrder” (http://xxx:8089/RegistrationService/api-docs/index.html?url=/RegistrationService/api-docs/swagger.json#!/Services/WcfSwaggerStart_Store_AddNewSalesOrder) - url to the Swagger docs
+
+[Fields]:
+	- SubTotal - **ItemDetails.LineTotal *** number of order items
+
+	- MosqueOrder - If a new Mosque is generated from the app, the details should be send to SAP by using AddNewSalesOrder. In this case, that boolean Mosque order differentiates the regular order with Mosque orders.
+
+	- MosqueID - SAP id of the mosque (waiting for the endpoint in SAP)
+
+	- DeliveryAddressID - SAP id of the delivery address
+
+	- DeliveryAddressType - type of the delivery address
+
+	- OrderDiscount - amount in currency of discount that is applied to the whole order (applied via promocode application or promotions)
+
+	- OrderDiscountPercentage - percentage of the discount in relation to the whole order without discount (discount percentage = discount / total amount before discount * 100%), format = "25" = 25%
+
+	- DeliveryAddressType - type of the delivery address
+
+	- NetAmount - final order amount
+
+	- DeliveryCost - 0 for now
+
+	- PaymentType - use get customer payment method endpoint and use type from there
+
+	- PaidAmount - initially paid amount is equal net amount (can be applied to coupons), can be reduced using coupons
+
+	- PaymentCardType - MasterCard, Visa, can be get from payment endpoint
+
+	- PaymentConfirmation - message from the payment gateway that reflects payment id
+
+	- ScheduledDeliveryDate - APP field deliveryDate
+
+	- ScheduledDeliverySlot - APP deliveryTimeSlot.value
+
+		- ItemDetails.SKUCode - product code (SAP id of the product)
+
+		- - ItemDetails.Qty - quantity of product
+
+		- ItemDetails.PromotionType - use the endpoint to get all of the promotion types
+
+		- ItemDetails.PromotionID - SAP id of promotion
+
+		- ItemDetails.DiscountPerc - amount in currency of discount that is applied to the specific line item
+
+		- ItemDetails.DiscountAmount - percentage of the discount in relation to the order item without discount (discount percentage = discount / total amount before discount * 100%), format = "25" = 25%
+
+		- ItemDetails.SalesPrice - price of the one item of product
+
+		- ItemDetails.LineTotal - quantity, multiplied by Qty * SalesPrice

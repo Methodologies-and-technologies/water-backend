@@ -1,0 +1,27 @@
+[Requirements]:
+	- Customer should be able to pay via credit / debit card using mobile application
+	- Payment gateway should support currency Kuwaiti Dinar (KWD)
+	- System should make order completed only when payment is verified by the payment provider
+	- System should not allow to make order paid by plain UI request (security violation) because client-side code can be hacked
+
+[Solution]:
+	- (Used payment provider) - Tap (https://www.tap.company/kw/en/developers), it supports KWD currency and works in the Kuwait
+	- (To simplify development of the payment integration we are going to use SDK for both iOS and Android platforms):
+		- Android SDK - https://github.com/Tap-Payments/goSellSDK-android 			- Connect to preview 
+		- iOS SDK - https://github.com/Tap-Payments/goSellSDK-iOS 				- Connect to preview 
+
+	- (Configuration properties):
+		- authToken — to authorize your requests.// Secret key (format: "sk_XXXXXXXXXXXXXXXXXXXXXXXX")
+		- app_id — replace it using your application ID "Application main package"
+
+	- (SDKs functions in two modes (Modes should be defined on the configuration of the SDK in the starting of the application)):
+		- sandbox - will be used for all of the testing (both manual and automatic)
+		- production - will be used for the production because it involves actual transfering real data
+
+	- (We use Transaction mode - Purchase, because we need only handle purchase of the products)
+
+	- (Tap system handle both CREDIT and DEBIT cards)
+
+	- (SDK is able to display its UI in languages):
+		- Arabic (ar)
+		- English (en)
