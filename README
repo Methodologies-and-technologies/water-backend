@@ -35,7 +35,7 @@ _______________________________________________________________|
 	- Goals
 	- Architecture
 	- Risks
-	- Drivers:
+	- Drivers: 
 	- Design constraints
 	- QA Scenarios
 	- Context view of the system
@@ -56,12 +56,12 @@ Security		| The ability to protect information, systems, and assets while delive
 _________________________________________________________________________________________________________|
 Reliability		| The ability of a system to recover from infrastructure or service disruptions, |
 			| dynamically acquire computing resources to meet demand,		    	 |
-			| and mitigate disruptions such as misconfigurations or transient network issues.|									    
+			| and mitigate disruptions such as misconfigurations or transient network issues.|
 _________________________________________________________________________________________________________|
 Performance Efficiency  | The ability to use computing resources efficiently to meet system requirements,|
 			| and to maintain that efficiency as demand changes and technologies evolve	 |
 _________________________________________________________________________________________________________|
-Cost Optimization	| The ability to run systems to deliver business value at the lowest price point.|									    
+Cost Optimization	| The ability to run systems to deliver business value at the lowest price point.|
 _________________________________________________________________________________________________________|
 
 [Goals]:
