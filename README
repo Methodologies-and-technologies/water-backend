@@ -35,7 +35,7 @@ _______________________________________________________________|
 	- Goals
 	- Architecture
 	- Risks
-	- Drivers: 
+	- Drivers:
 	- Design constraints
 	- QA Scenarios
 	- Context view of the system
@@ -135,7 +135,7 @@ ________________________________________________________________________________
 		- Artifact: Some specific microservice
 		- Response: Change is made only in environment variables without effect on the source code
 		- Response measure: No artifacts are affected except configuration files
-
+  
 	- (Performance):
 		- Source: External
 		- Stimulus: Huge traffic on the computational instance
