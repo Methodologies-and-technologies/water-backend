@@ -1,11 +1,11 @@
-					[Backend for water delivery application]
+						[Backend for water delivery application]
 Delivery of the water across the United Emirates, the mobile application allows ordering the water in bottles and
 the backend application is integrated with the SAP CRM system sync mobile users data with business data is an
 MIT-licensed open source project, members are students of the FICT KPI group, the main target - program which
 includes work with database management system, object oriented model - presentation of the data, object-relational
 mapping data from relational database to OOM
 
-					[Main functionality]
+						[Main functionality]
 Working screens for: (un)registrated user and administrator. Addtional functionality - saving real-time data about the location of
 the user in space during the registartion of the client. The fallen output of the results in the form of a graph.
 The delivery service offers international shipping water items for the clients, according to the requirements.
