@@ -1,16 +1,16 @@
-						[Backend for water delivery application]
+					[Backend for water delivery application]
 Delivery of the water across the United Emirates, the mobile application allows ordering the water in bottles and
 the backend application is integrated with the SAP CRM system sync mobile users data with business data is an
 MIT-licensed open source project, members are students of the FICT KPI group, the main target - program which
 includes work with database management system, object oriented model - presentation of the data, object-relational
 mapping data from relational database to OOM
 
-						[Main functionality]
+					[Main functionality]
 Working screens for: (un)registrated user and administrator. Addtional functionality - saving real-time data about the location of
 the user in space during the registartion of the client. The fallen output of the results in the form of a graph.
 The delivery service offers international shipping water items for the clients, according to the requirements.
 
-                                        	[Architecture]
+                                        [Architecture]
 [This section should present]:
 	- the main architectural difficulties,
 	- the use of 3-rd services,
@@ -209,7 +209,7 @@ ________________________________________________________________________________
 				- how to fix this kind of error
 		- Response measure: Users spend less time understanding the system and its functionality
 
-						[PHOTOS-HERE]
+					[PHOTOS-HERE]
 
 [Architecture flow]:
 	- (Client Apps):
@@ -287,7 +287,7 @@ ________________________________________________________________________________
 	- Nginx
 	- Azure Service Bus
 
-                                                [Environments-Deployment schedule]
+                                        [Environments-Deployment schedule]
 
 [Main challenge]:
 	- In Adjaa Water project we have integration using messaging between APP system and SAP system
@@ -324,7 +324,7 @@ ________________________________________________________________________________
 		be deployed to this environment only after living for 1 - 2 weeks at the staging environment.
 	- Related branch for APP repository: main
 
-                                          	[ERD]
+                                          [ERD]
 
 [This section should present]:
 	- specifics of databases of different instances,
@@ -347,7 +347,7 @@ _______________________________________________________________|
 [On this page]:
 	- Client API Database
 
-                                                [Integration between SAP and APP]
+                                          [Integration between SAP and APP]
 
 [Business requirements]:
 	- Integration between SAP and APP systems to sync changes made in different applications
@@ -384,7 +384,7 @@ _______________________________________________________________|
 			changes in its own database and then performs an API call
 		  to another app to sync its database with the producer’s database.
 
-						[PHOTOS-HERE]:
+					[PHOTOS-HERE]:
 
 [IDs handling]:
 	- Since both APP and SAP will have their own databases and may have different formats of ids and
@@ -475,7 +475,7 @@ _______________________________________________________________|
 	- It stays on the staging fo some transition period (1 week etc) and we regularly monitor is there
 		any issues related to interacting between two apps
 
-                           			[Shared entities between SAP and APP]
+                           		[Shared entities between SAP and APP]
 
 [Summary]:
 	- Entities where changes are propagated from APP to SAP:
@@ -491,7 +491,7 @@ _______________________________________________________________|
 	- delivery details
 	- orders
 
-                                  		[Payment integration]
+                                  	[Payment integration]
 
 [Requirements]:
 	- Customer should be able to pay via credit / debit card using mobile application
