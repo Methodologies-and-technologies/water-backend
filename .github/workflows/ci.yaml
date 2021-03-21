@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  test-unit:
+    name: Testing code
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: nft_database
+          POSTGRES_USER: dev
+          POSTGRES_PASSWORD: dev
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules-test
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit testing for push
+        run: npm run test:cov -- --json --outputFile=./jest.results.json
+
+      - name: Run unit testing for PR
+        uses: mattallty/jest-github-action@v1.0.3
+        if: ${{ github.event.pull_request != null }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          changes-only: true
+
+      - name: Send status to Slack
+        uses: 8398a7/action-slack@v3
+        if: ${{ failure() }}
+        with:
+          status: ${{ job.status }}
+          fields: all
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GHBA_WEBHOOK_URL }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
